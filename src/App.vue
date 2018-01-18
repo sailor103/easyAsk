@@ -45,7 +45,8 @@
       <div
         class="next btn"
         @click="onNext"
-        :class="{disable: ((current == (qa.length - 1)) || ans.length == current)}">下一题</div>
+        :class="{disable: hideNext}">
+        下一题</div>
     </div>
 
     <div class="submit btn" v-if="sta == 1 && ans.length == qa.length">提交问卷</div>
@@ -84,20 +85,45 @@ export default {
     });
   },
   computed: {
+    hideNext() {
+      if (this.current == this.qas.length - 1) {
+        return true;
+      }
+      if (this.ans[this.current] && this.ans[this.current].qs) {
+        return false;
+      }
+      return true;
+    }
   },
   methods: {
     startQs() {
       this.sta = 1;
     },
-    onSetAns(ans) {
-      if (this.qas[ans.qaIndex].s) { // 单选
-        this.ans.push(ans);
+    onSetAns(a) {
+      if (this.qas[a.qaIndex].s) { // 单选
+        this.ans.splice(a.qaIndex, 1, {
+          qx: a.qaIndex,
+          qs: `sel_${a.selIndex}`,
+        });
+      } else { // 多选
       }
     },
     onPrev() {
+      if (this.current > 0) {
+        const old = this.qas[this.current];
+        old.show = false;
+
+        const n = this.qas[this.current - 1];
+        n.show = true;
+
+        this.qas.splice(this.current, 1, old);
+        this.qas.splice(this.current - 1, 1, n);
+
+        this.current = this.current - 1;
+      }
     },
     onNext() {
-      if (this.current < this.qas.length - 1) { //还缺判断
+      if (!this.hideNext) { // 还缺判断
         const old = this.qas[this.current];
         old.show = false;
 

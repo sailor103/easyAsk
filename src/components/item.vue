@@ -49,16 +49,21 @@ export default {
           sel: true,
           text: this.sels[sindex].text,
         });
+        this.$emit('setAns', {
+          qaIndex: this.qaIndex,
+          selIndex: sindex,
+        });
       } else { // 多选
         this.sels.splice(sindex, 1, {
           sel: !this.sels[sindex].sel,
           text: this.sels[sindex].text,
         });
+        this.$emit('setAns', {
+          qaIndex: this.qaIndex,
+          selIndex: sindex,
+          isAdd: this.sels[sindex].sel,
+        });
       }
-      this.$emit('setAns', {
-        qaIndex: this.qaIndex,
-        selIndex: sindex,
-      });
     },
   },
 };
