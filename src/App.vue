@@ -10,14 +10,14 @@
       <p>为确保研究结果真实可信，希望您能认真对待。您只需约5分钟即可完成问卷，谢谢合作。</p>
     </div>
     <div class="thanks" v-if="sta == 2">
-      非常感谢您的配合，您的态度对我的研究非常有用。
+      <p>非常感谢您的配合，您的态度对我的研究非常有用。</p>
     </div>
 
     <!--进度条-->
     <div class="prcbar" v-if="sta == 1">
       <div
         class="prc"
-        :style="{width: current/(qa.length-1.0) * 100.0 +'%'}"></div>
+        :style="{width: current/(qas.length-1.0) * 100.0 +'%'}"></div>
     </div>
 
     <!--问题组件-->
@@ -49,7 +49,12 @@
         下一题</div>
     </div>
 
-    <div class="submit btn" v-if="sta == 1 && ans.length == qa.length">提交问卷</div>
+    <div
+      class="submit btn"
+      @click="onSubmitAns"
+      v-if="sta == 1 && showSubmit">提交问卷</div>
+
+    <Loading :show="loadObj.show"> {{loadObj.text}}</Loading>
 
   </div>
 </template>
@@ -58,30 +63,35 @@
 /* eslint eqeqeq:0 */
 /* eslint no-param-reassign: 0 */
 import item from './components/item';
-import qa from './storage/qs';
+import Loading from './components/Loading';
+import qas from './storage/qs';
 
 export default {
   name: 'App',
   components: {
     item,
+    Loading,
   },
   data() {
     return {
       sta: 1, // 0 未开始 1 正在进行 2 结束
-      qa,
-      qas: [],
-      ans: [], // 用户答案
+      qas,
       current: 0,
+      loadObj: {
+        show: false,
+        text: '加载中...',
+      },
     };
   },
   created() {
-    this.qas = this.qa.map((i, index) => {
-      if (index == 0) {
-        i.show = true;
-      } else {
-        i.show = false;
-      }
-      return i;
+    const APP_ID = 'w1QY6hFcT63xvmFUSV7uvaJk-gzGzoHsz';
+    const APP_KEY = 'nSyKSIKJTjFjHorHbgYrBVtr';
+
+    const AV = window.AV;
+
+    AV.init({
+      appId: APP_ID,
+      appKey: APP_KEY,
     });
   },
   computed: {
@@ -89,11 +99,16 @@ export default {
       if (this.current == this.qas.length - 1) {
         return true;
       }
-      if (this.ans[this.current] && this.ans[this.current].qs) {
+      const hasSel = this.qas[this.current].sel.some(i => i.selected);
+      if (hasSel) {
         return false;
       }
       return true;
-    }
+    },
+    showSubmit() {
+      const selArr = this.qas.map(qi => qi.sel.some(i => i.selected));
+      return selArr.every(i => i);
+    },
   },
   methods: {
     startQs() {
@@ -101,11 +116,18 @@ export default {
     },
     onSetAns(a) {
       if (this.qas[a.qaIndex].s) { // 单选
-        this.ans.splice(a.qaIndex, 1, {
-          qx: a.qaIndex,
-          qs: `sel_${a.selIndex}`,
+        this.qas[a.qaIndex].sel.forEach((i) => {
+          i.selected = false;
+        });
+        this.$set(this.qas[a.qaIndex].sel, a.selIndex, {
+          selected: true,
+          text: this.qas[a.qaIndex].sel[a.selIndex].text,
         });
       } else { // 多选
+        this.$set(this.qas[a.qaIndex].sel, a.selIndex, {
+          selected: !this.qas[a.qaIndex].sel[a.selIndex].selected,
+          text: this.qas[a.qaIndex].sel[a.selIndex].text,
+        });
       }
     },
     onPrev() {
@@ -136,6 +158,32 @@ export default {
         this.current = this.current + 1;
       }
     },
+    onSubmitAns() {
+      this.loadObj.show = true;
+
+      const ES = window.AV.Object.extend('easyAsk');
+      const eak = new ES();
+
+      this.qas.forEach((q, qinx) => {
+        const mysel = [];
+        q.sel.forEach((i, ix) => {
+          if (i.selected) {
+            mysel.push(`sel_${ix}`);
+          }
+        });
+        eak.set(`qestion_${qinx}`, mysel.join(';'));
+      });
+
+      eak.save().then((rel) => {
+        // 成功保存之后，执行其他逻辑.
+        console.log('save success====>', rel);
+        this.loadObj.show = false;
+        this.sta = 2;
+      }, (error) => {
+        // 异常处理
+        console.log('svae error=======>', error);
+      });
+    },
   },
 };
 </script>
@@ -159,22 +207,28 @@ html,body {
 }
 
 .btn {
-  height: 45px;
-  line-height: 45px;
+  height: 40px;
+  line-height: 40px;
   background: #44b549;
   border-radius: 5px;
   text-align: center;
   color: #fff;
   font-size: 16px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .btn.disable {
-  background: grey;
+  background: grey !important;
   color: #aaa;
 }
 
-.intro {
+.btn.sel {
+  border: 2px dashed black;
+  background: red;
+}
+
+.intro,.thanks {
   width: 100%;
   margin: 0 auto;
   background: #fff;
@@ -182,7 +236,7 @@ html,body {
   padding: 20px;
   font-size: 15px;
 }
-.intro p {
+.intro p,.thanks p {
   margin-bottom: 10px;
 }
 .start {
@@ -205,18 +259,32 @@ html,body {
   width: 100%;
   position: relative;
   height: 45px;
-  margin: 20px 0;
+  margin: 30px 0;
 }
 .nav .prev {
   width: 45%;
   position: absolute;
   top: 0;
   left: 0;
+  border-top-left-radius: 50px;
+  border-bottom-left-radius: 50px;
+  height: 36px;
+  line-height: 36px;
+  background: #4889db;
 }
 .nav .next {
   width: 45%;
   position: absolute;
   top: 0;
   right: 0;
+  border-top-right-radius: 50px;
+  border-bottom-right-radius: 50px;
+  height: 36px;
+  line-height: 36px;
+  background: #4889db;
+}
+.submit {
+  font-size: 20px;
+  background: #ff9000;
 }
 </style>

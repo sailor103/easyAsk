@@ -5,8 +5,8 @@
     <div class="sels">
       <div
         class="btn"
-        v-for="(item, index) in sels"
-        :class="{sel: item.sel == true}"
+        v-for="(item, index) in qaDet.sel"
+        :class="{sel: item.selected == true}"
         @click="setAns(index)"
         :key="index">
         {{item.text}}
@@ -23,47 +23,16 @@ export default {
     qaDet: Object,
     qaIndex: Number,
   },
-  data() {
-    return {
-      sels: [],
-    };
-  },
   computed: {
   },
   created() {
-    this.sels = this.qaDet.sel.map((i) => {
-      const o = {
-        sel: false,
-        text: i,
-      };
-      return o;
-    });
   },
   methods: {
     setAns(sindex) {
-      if (this.qaDet.s) { // 单选
-        this.sels.forEach((i) => {
-          i.sel = false;
-        });
-        this.sels.splice(sindex, 1, {
-          sel: true,
-          text: this.sels[sindex].text,
-        });
-        this.$emit('setAns', {
-          qaIndex: this.qaIndex,
-          selIndex: sindex,
-        });
-      } else { // 多选
-        this.sels.splice(sindex, 1, {
-          sel: !this.sels[sindex].sel,
-          text: this.sels[sindex].text,
-        });
-        this.$emit('setAns', {
-          qaIndex: this.qaIndex,
-          selIndex: sindex,
-          isAdd: this.sels[sindex].sel,
-        });
-      }
+      this.$emit('setAns', {
+        qaIndex: this.qaIndex,
+        selIndex: sindex,
+      });
     },
   },
 };
@@ -72,17 +41,13 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
   .btn {
-    margin: 20px 0;
-  }
-  .btn.sel {
-    border: 2px dashed black;
-    background: red;
+    margin: 15px 0;
   }
   .big {
-    font-size: 18px;
+    font-size: 24px;
   }
   .title {
-    font-size: 16px;
+    font-size: 20px;
     margin-top: 20px;
   }
 </style>
